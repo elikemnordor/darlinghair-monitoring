@@ -1,0 +1,19 @@
+# OS
+.DS_Store
+Thumbs.db
+
+# Editor
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# Logs
+*.log
+
+# Node (if added later)
+node_modules/
+package-lock.json
+
+# Supabase config with real credentials
+js/config/supabase.config.js
