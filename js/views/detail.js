@@ -3,10 +3,7 @@ import { state } from '../state.js';
 import { createCarousel } from '../components/carousel.js';
 import { createNavMapView } from '../components/map.js';
 import { 
-  uploadImage, 
-  deleteImage, 
-  getStoragePathFromUrl, 
-  isDataUrl
+  uploadImage
 } from '../services/supabase.js';
 
 export function renderDetail(params) {
@@ -241,8 +238,9 @@ function renderEditMode(outlet) {
         <div class="form-group">
           <label>Outlet Type</label>
           <select name="outlet_type" id="outlet-type" required>
-            <option value="retail" ${outlet.outlet_type === 'retail' ? 'selected' : ''}>Retail</option>
-            <option value="salon" ${outlet.outlet_type === 'salon' ? 'selected' : ''}>Salon</option>
+            ${!isValidated ? '<option value="" selected disabled>Select Outlet Type</option>' : ''}
+            <option value="retail" ${isValidated && outlet.outlet_type === 'retail' ? 'selected' : ''}>Retail</option>
+            <option value="salon" ${isValidated && outlet.outlet_type === 'salon' ? 'selected' : ''}>Salon</option>
           </select>
         </div>
       </div>
@@ -312,12 +310,12 @@ function renderEditMode(outlet) {
         
         <div class="form-group">
           <label>Community</label>
-          <input type="text" name="community" value="${outlet.community}" required>
+          <input type="text" name="community" value="${outlet.community}" required readonly>
         </div>
         
         <div class="form-group">
           <label>Assembly</label>
-          <input type="text" name="assembly" value="${outlet.assembly}" required>
+          <input type="text" name="assembly" value="${outlet.assembly}" required readonly>
         </div>
         
         <div class="form-group">
@@ -357,7 +355,7 @@ function renderEditMode(outlet) {
         </div>
       </div>
       
-      <div class="detail-section" id="salon-section" ${outlet.outlet_type === 'retail' ? 'style="display:none"' : ''}>
+      <div class="detail-section" id="salon-section" ${(!isValidated || outlet.outlet_type === 'retail') ? 'style="display:none"' : ''}>
         <h3>Salon Details</h3>
         
         <div class="form-group">
@@ -489,11 +487,14 @@ function renderEditMode(outlet) {
   const stylistsInput = document.getElementById('stylists-input');
   
   outletTypeSelect.addEventListener('change', (e) => {
-    if (e.target.value === 'retail') {
-      salonSection.style.display = 'none';
-      stylistsInput.value = '0';
-    } else {
+    if (e.target.value === 'salon') {
       salonSection.style.display = 'block';
+      if (!isValidated) {
+        try { stylistsInput.value = '0'; } catch(_) {}
+      }
+    } else {
+      salonSection.style.display = 'none';
+      try { stylistsInput.value = '0'; } catch(_) {}
     }
   });
   
@@ -599,6 +600,24 @@ function renderEditMode(outlet) {
   telescopicCb.addEventListener('change', (e) => {
     telescopicImageGroup.style.display = e.target.checked ? 'block' : 'none';
   });
+  
+  // Input restrictions
+  try {
+    const contactNameInput = editFormEl.querySelector('input[name="contact_name"]');
+    if (contactNameInput) {
+      contactNameInput.addEventListener('input', () => {
+        contactNameInput.value = contactNameInput.value.replace(/[^A-Za-z\s]/g, '');
+      });
+    }
+    ['contact_phone', 'business_phone'].forEach((n) => {
+      const inp = editFormEl.querySelector(`input[name="${n}"]`);
+      if (inp) {
+        inp.addEventListener('input', () => {
+          inp.value = inp.value.replace(/\D/g, '');
+        });
+      }
+    });
+  } catch(_) {}
   
   // Handle image removal
   document.querySelectorAll('.btn-remove-image').forEach(btn => {
@@ -779,6 +798,101 @@ async function saveOutlet(originalOutlet) {
     }
   }
   
+  // If not validating, do not perform any uploads/deletes or DB writes
+  if (!willValidate) {
+    alert('Please mark as validated to save changes.');
+    setSaving(false);
+    return;
+  }
+  
+  const __pv_outletName = (formData.get('outlet_name') || '').trim();
+  const __pv_contactName = (formData.get('contact_name') || '').trim();
+  const __pv_contactPhone = (formData.get('contact_phone') || '').trim();
+  const __pv_businessPhone = (formData.get('business_phone') || '').trim();
+  const __pv_agreementDateStr = formData.get('partnership_agreement_date') || '';
+  const __pv_expiringDateStr = formData.get('partnership_expiring_date') || '';
+  const __pv_telescopicChecked = formData.get('telescopic') === 'on';
+  const __pv_selectedType = (formData.get('outlet_type') || '').trim();
+  const __pv_stylists = parseInt(formData.get('number_of_stylists')) || 0;
+
+  if (willValidate) {
+    if (!__pv_outletName || __pv_outletName.toLowerCase() === 'tbd') {
+      alert('Outlet Name is required and cannot be "TBD".');
+      setSaving(false);
+      return;
+    }
+    if (!__pv_contactName || __pv_contactName.toLowerCase() === 'null') {
+      alert('Contact name is required and cannot be null or empty.');
+      setSaving(false);
+      return;
+    }
+    const __pv_lettersOnly = /^[A-Za-z\s]+$/;
+    if (!__pv_lettersOnly.test(__pv_contactName)) {
+      alert('Contact name must contain letters only.');
+      setSaving(false);
+      return;
+    }
+    const __pv_digits10 = /^\d{1,10}$/;
+    if (!__pv_contactPhone || __pv_contactPhone.toLowerCase() === 'null' || !__pv_digits10.test(__pv_contactPhone)) {
+      alert('Contact phone must be 1-10 digits (numbers only) and cannot be null or empty.');
+      setSaving(false);
+      return;
+    }
+    if (!__pv_businessPhone || __pv_businessPhone.toLowerCase() === 'null' || !__pv_digits10.test(__pv_businessPhone)) {
+      alert('Business phone must be 1-10 digits (numbers only) and cannot be null or empty.');
+      setSaving(false);
+      return;
+    }
+    if (!__pv_agreementDateStr || !__pv_expiringDateStr) {
+      alert('Partnership agreement and expiry dates are required.');
+      setSaving(false);
+      return;
+    }
+    const __pv_agreementDate = new Date(__pv_agreementDateStr);
+    const __pv_expiringDate = new Date(__pv_expiringDateStr);
+    if (__pv_expiringDate < __pv_agreementDate) {
+      alert('Partnership expiry date cannot be before the agreement date.');
+      setSaving(false);
+      return;
+    }
+    // First-time validation must have an explicitly selected outlet type
+    if (!wasValidated && !__pv_selectedType) {
+      alert('Please select an outlet type.');
+      setSaving(false);
+      return;
+    }
+    // Salon must have stylists > 0
+    if (__pv_selectedType === 'salon' && __pv_stylists === 0) {
+      alert('Number of Stylists must be greater than zero for Salon outlets.');
+      setSaving(false);
+      return;
+    }
+  }
+
+  if (willValidate && !wasValidated) {
+    const __pv_removedFront = !!document.querySelector('[data-remove-image="outlet_front_image"]');
+    const __pv_removedSide = !!document.querySelector('[data-remove-image="outlet_side_image"]');
+    const __pv_removedTel = !!document.querySelector('[data-remove-image="telescopic_image"]');
+    const __pv_hasNewFront = (() => { const f = formData.get('outlet_front_image'); return f && f.size > 0; })();
+    const __pv_hasNewSide = (() => { const f = formData.get('outlet_side_image'); return f && f.size > 0; })();
+    const __pv_hasNewTel = (() => { const f = formData.get('telescopic_image'); return f && f.size > 0; })();
+    const __pv_frontOk = __pv_hasNewFront || (!__pv_removedFront && !!originalOutlet.outlet_front_image);
+    const __pv_sideOk = __pv_hasNewSide || (!__pv_removedSide && !!originalOutlet.outlet_side_image);
+    if (!__pv_frontOk || !__pv_sideOk) {
+      alert('Front and side images are required for validation.');
+      setSaving(false);
+      return;
+    }
+    if (__pv_telescopicChecked) {
+      const __pv_telOk = __pv_hasNewTel || (!__pv_removedTel && !!originalOutlet.telescopic_image);
+      if (!__pv_telOk) {
+        alert('Telescopic image is required when telescopic is present.');
+        setSaving(false);
+        return;
+      }
+    }
+  }
+
   // Process image uploads
   const imageFields = ['outlet_front_image', 'outlet_side_image', 'telescopic_image'];
   const imageData = {};
@@ -791,12 +905,6 @@ async function saveOutlet(originalOutlet) {
     
     if (removeMarker) {
       // Image was removed - delete from storage if it's a storage URL
-      if (existingUrl && !isDataUrl(existingUrl)) {
-        const storagePath = getStoragePathFromUrl(existingUrl);
-        if (storagePath) {
-          await deleteImage(storagePath);
-        }
-      }
       imageData[field] = null;
     } else if (file && file.size > 0) {
       // New image uploaded
@@ -813,14 +921,6 @@ async function saveOutlet(originalOutlet) {
         return;
       }
       try {
-        // Delete old image from storage if exists
-        if (existingUrl && !isDataUrl(existingUrl)) {
-          const storagePath = getStoragePathFromUrl(existingUrl);
-          if (storagePath) {
-            await deleteImage(storagePath);
-          }
-        }
-        
         // Upload to Storage
         const filename = field.replace(/_image$/, ''); // outlet_front_image -> outlet_front
         const result = await uploadImage(file, session.userId, `${filename}_${capturedId}`);
@@ -869,10 +969,6 @@ async function saveOutlet(originalOutlet) {
     
     if (removed) {
       // delete from storage if needed
-      if (existingUrl && !isDataUrl(existingUrl)) {
-        const storagePath = getStoragePathFromUrl(existingUrl);
-        if (storagePath) await deleteImage(storagePath);
-      }
       productImages.push(null);
     } else if (file) {
       // validate size/type (reuse earlier constraints)
@@ -888,10 +984,6 @@ async function saveOutlet(originalOutlet) {
         return;
       }
       try {
-        if (existingUrl && !isDataUrl(existingUrl)) {
-          const storagePath = getStoragePathFromUrl(existingUrl);
-          if (storagePath) await deleteImage(storagePath);
-        }
         const result = await uploadImage(file, session.userId, `product_${slug}_${capturedId}`);
         if (result.error) throw new Error(result.error.message);
         productImages.push(result.url);
@@ -954,6 +1046,12 @@ async function saveOutlet(originalOutlet) {
       setSaving(false);
       return;
     }
+    const lettersOnly = /^[A-Za-z\s]+$/;
+    if (!lettersOnly.test(contactName)) {
+      alert('Contact name must contain letters only.');
+      setSaving(false);
+      return;
+    }
     const digits10 = /^\d{1,10}$/;
     if (!contactPhone || contactPhone.toLowerCase() === 'null' || !digits10.test(contactPhone)) {
       alert('Contact phone must be 1-10 digits (numbers only) and cannot be null or empty.');
@@ -974,6 +1072,11 @@ async function saveOutlet(originalOutlet) {
     const expiringDate = new Date(expiringDateStr);
     if (expiringDate < agreementDate) {
       alert('Partnership expiry date cannot be before the agreement date.');
+      setSaving(false);
+      return;
+    }
+    if (formData.get('outlet_type') === 'salon' && (parseInt(formData.get('number_of_stylists')) || 0) === 0) {
+      alert('Number of Stylists must be greater than zero for Salon outlets.');
       setSaving(false);
       return;
     }
