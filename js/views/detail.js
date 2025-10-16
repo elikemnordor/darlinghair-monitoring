@@ -35,11 +35,11 @@ export function renderDetail(params) {
             if (outlet.outlet_front_image) carouselImages.push(outlet.outlet_front_image);
             if (outlet.outlet_side_image) carouselImages.push(outlet.outlet_side_image);
             if (carouselImages.length === 0) {
-              carouselImages.push('https://via.placeholder.com/720x405/dddddd/666666?text=No+Image');
+              carouselImages.push('darling-placeholder.jpg');
             }
             return carouselImages.map(img => `
               <div class="carousel-slide">
-                <img src="${img}" alt="${outlet.outlet_name}" loading="lazy">
+                <img src="${img}" alt="${outlet.outlet_name}" loading="lazy" onerror="this.onerror=null; this.src='darling-placeholder.jpg';">
               </div>
             `).join('');
           })()}
@@ -147,7 +147,7 @@ function renderViewMode(outlet) {
           <div class="carousel-track">
             ${productTelescopicImages.map(img => `
               <div class="carousel-slide">
-                <img src="${img.url}" alt="${img.label}" loading="lazy">
+                <img src="${img.url}" alt="${img.label}" loading="lazy" onerror="this.onerror=null; this.src='darling-placeholder.jpg';">
                 <div class="carousel-image-label">
                   <span class="image-label-chip">${img.label}</span>
                 </div>
