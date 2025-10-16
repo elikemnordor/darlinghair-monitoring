@@ -421,7 +421,7 @@ function addListStyles() {
     }
     
     .header-top h1 {
-      font-size: 24px;
+      font-size: 16px;
       font-weight: 700;
     }
     
@@ -478,9 +478,9 @@ function addListStyles() {
       display: flex;
       align-items: center;
       gap: 8px;
-      padding: 8px 16px;
+      padding: 6px 12px;
       border: 2px solid var(--border-color);
-      border-radius: 24px;
+      border-radius: 20px;
       background-color: white;
       font-size: 14px;
       font-weight: 500;
@@ -502,12 +502,12 @@ function addListStyles() {
       display: inline-flex;
       align-items: center;
       justify-content: center;
-      min-width: 24px;
-      height: 24px;
-      padding: 0 6px;
+      min-width: 20px;
+      height: 20px;
+      padding: 0 5px;
       background-color: var(--border-color);
-      border-radius: 12px;
-      font-size: 13px;
+      border-radius: 10px;
+      font-size: 12px;
       font-weight: 600;
       color: var(--secondary-color);
     }
