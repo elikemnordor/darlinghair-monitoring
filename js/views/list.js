@@ -313,6 +313,9 @@ function createOutletCard(outlet) {
   const validatedClass = outlet._isValidated ? 'validated' : 'not-validated';
   const validatedText = outlet._isValidated ? 'Validated' : 'Not validated';
   
+  // Branded camera placeholder (SVG data URI)
+  const placeholderDataUri = 'darling-placeholder.jpg';
+
   // Collect all available images
   const images = [];
   if (outlet.outlet_front_image) images.push(outlet.outlet_front_image);
@@ -325,7 +328,7 @@ function createOutletCard(outlet) {
   
   // Fallback placeholder if no images
   if (images.length === 0) {
-    images.push('https://via.placeholder.com/720x405/dddddd/666666?text=No+Image');
+    images.push(placeholderDataUri);
   }
   
   const outletId = outlet.captured_id || outlet.assigned_outlet_id;
@@ -336,7 +339,7 @@ function createOutletCard(outlet) {
         <div class="carousel-track">
           ${images.map(img => `
             <div class="carousel-slide">
-              <img src="${img}" alt="${outlet.outlet_name}" loading="lazy">
+              <img src="${img}" alt="${outlet.outlet_name}" loading="lazy" onerror="this.onerror=null; this.src='${placeholderDataUri}';">
             </div>
           `).join('')}
         </div>
@@ -433,9 +436,13 @@ function addListStyles() {
     
     .btn-icon {
       background: none;
-      color: var(--accent-color);
+      color: #9262CC;
       font-size: 14px;
       font-weight: 600;
+    }
+    
+    .btn-icon:hover {
+      color: #6E3AB6;
     }
     
     .filters-section {
@@ -454,6 +461,24 @@ function addListStyles() {
     
     .search-box {
       margin-bottom: 12px;
+    }
+    
+    .search-box input,
+    .filters-row select {
+      font-size: 14px;
+      padding: 12px 16px;
+      border: 1px solid #E6DDF4;
+      border-radius: 14px;
+      background: #FFFFFF;
+      box-shadow: 0 6px 16px rgba(109, 73, 170, 0.08);
+      transition: border-color 0.2s ease, box-shadow 0.2s ease;
+    }
+    
+    .search-box input:focus,
+    .filters-row select:focus {
+      border-color: #9262CC;
+      box-shadow: 0 0 0 3px rgba(146, 98, 204, 0.18);
+      outline: none;
     }
     
     .filters-row {
@@ -478,10 +503,10 @@ function addListStyles() {
       display: flex;
       align-items: center;
       gap: 8px;
-      padding: 6px 12px;
-      border: 2px solid var(--border-color);
-      border-radius: 20px;
-      background-color: white;
+      padding: 8px 16px;
+      border: 1px solid rgba(146, 98, 204, 0.24);
+      border-radius: 22px;
+      background-color: rgba(253, 252, 254, 0.92);
       font-size: 14px;
       font-weight: 500;
       cursor: pointer;
@@ -494,7 +519,7 @@ function addListStyles() {
     }
     
     .validation-chip .chip-label {
-      color: var(--text-color);
+      color: #4D2F8C;
       flex: 1;
     }
     
@@ -504,17 +529,17 @@ function addListStyles() {
       justify-content: center;
       min-width: 20px;
       height: 20px;
-      padding: 0 5px;
-      background-color: var(--border-color);
+      padding: 0 6px;
+      background-color: rgba(146, 98, 204, 0.15);
       border-radius: 10px;
       font-size: 12px;
       font-weight: 600;
-      color: var(--secondary-color);
+      color: #4D2F8C;
     }
     
     .validation-chip.active {
-      border-color: var(--primary-color);
-      background-color: var(--primary-color);
+      border-color: #9262CC;
+      background-color: #9262CC;
     }
     
     .validation-chip.active .chip-label {
@@ -586,6 +611,36 @@ function addListStyles() {
       font-size: 12px;
       padding: 3px 8px;
     }
+    
+    /* Card badges with brand tints */
+    .outlet-card .badge {
+      border: none;
+      border-radius: 16px;
+      background: rgba(146, 98, 204, 0.15);
+      color: #4D2F8C;
+      font-weight: 600;
+    }
+    .outlet-card .badge-validated {
+      background: rgba(45, 185, 149, 0.20); /* teal only to highlight success */
+      color: #1A7F66;
+    }
+    .outlet-card .badge-not-validated {
+      background: rgba(247, 196, 109, 0.22);
+      color: #8A5B00;
+    }
+    .outlet-card .badge-retail {
+      background: rgba(146, 207, 251, 0.20);
+      color: #255D98;
+    }
+    .outlet-card .badge-salon {
+      background: rgba(146, 98, 204, 0.25);
+      color: #6E3AB6;
+    }
+    
+    /* Carousel dot emphasis */
+    .carousel-dots { gap: 6px; }
+    .carousel-dot { width: 6px; height: 6px; border-radius: 50%; background-color: rgba(255,255,255,0.55); }
+    .carousel-dot.active { background-color: #9262CC; width: 8px; height: 8px; }
     
     .empty-state {
       text-align: center;
