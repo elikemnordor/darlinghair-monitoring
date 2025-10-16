@@ -5,9 +5,6 @@ import {
   getCapturedOutlets as fetchCapturedOutletsFromSupabase,
   upsertCapturedOutlet as upsertCapturedOutletToSupabase,
   deleteCapturedOutlet as deleteCapturedOutletFromSupabase,
-  deleteImage,
-  getStoragePathFromUrl,
-  isDataUrl,
   getProducts
 } from './services/supabase.js';
 
@@ -302,42 +299,10 @@ async function updateCapturedOutlet(capturedId, updates) {
 }
 
 async function deleteCapturedOutlet(capturedId) {
-  // Find the outlet to get image URLs before deleting
-  const outlet = appState.capturedOutlets.find(c => c.captured_id === capturedId);
-  
   // Try Supabase first
   try {
     const { error } = await deleteCapturedOutletFromSupabase(capturedId);
     if (error) throw error;
-    
-    // Delete associated images from Storage (arrays + legacy fields)
-    if (outlet) {
-      const imageUrls = [];
-      // Core images
-      if (outlet.outlet_front_image) imageUrls.push(outlet.outlet_front_image);
-      if (outlet.outlet_side_image) imageUrls.push(outlet.outlet_side_image);
-      if (outlet.telescopic_image) imageUrls.push(outlet.telescopic_image);
-      // New per-product array
-      if (Array.isArray(outlet.product_images)) {
-        for (const url of outlet.product_images) {
-          if (url) imageUrls.push(url);
-        }
-      }
-      // Backward-compat legacy per-product fields (if any remain in old records)
-      if (outlet.product_a_image) imageUrls.push(outlet.product_a_image);
-      if (outlet.product_b_image) imageUrls.push(outlet.product_b_image);
-      if (outlet.product_c_image) imageUrls.push(outlet.product_c_image);
-
-      for (const url of imageUrls) {
-        if (url && !isDataUrl(url)) {
-          const storagePath = getStoragePathFromUrl(url);
-          if (storagePath) {
-            await deleteImage(storagePath);
-            console.log(`🗑️ Deleted image from Storage: ${storagePath}`);
-          }
-        }
-      }
-    }
     
     // Update local state
     const initialLength = appState.capturedOutlets.length;
