@@ -35,11 +35,11 @@ export function renderDetail(params) {
             if (outlet.outlet_front_image) carouselImages.push(outlet.outlet_front_image);
             if (outlet.outlet_side_image) carouselImages.push(outlet.outlet_side_image);
             if (carouselImages.length === 0) {
-              carouselImages.push('darling-placeholder.jpg');
+              carouselImages.push('assets/darling-placeholder.jpg');
             }
             return carouselImages.map(img => `
               <div class="carousel-slide">
-                <img src="${img}" alt="${outlet.outlet_name}" loading="lazy" onerror="this.onerror=null; this.src='darling-placeholder.jpg';">
+                <img src="${img}" alt="${outlet.outlet_name}" loading="lazy" onerror="this.onerror=null; this.src='assets/darling-placeholder.jpg';">
               </div>
             `).join('');
           })()}
