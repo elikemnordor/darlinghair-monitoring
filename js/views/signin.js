@@ -9,7 +9,7 @@ export function renderSignIn() {
     <div class="signin-view">
       <div class="signin-container">
         <div class="signin-brand">
-          <img src="logo.svg" alt="Client Logo" class="signin-logo"/>
+          <img src="assets/logo.svg" alt="Client Logo" class="signin-logo"/>
         </div>
         <div class="signin-header">
           <h1>Outlet Directory</h1>
