@@ -314,7 +314,7 @@ function createOutletCard(outlet) {
   const validatedText = outlet._isValidated ? 'Validated' : 'Not validated';
   
   // Branded camera placeholder (SVG data URI)
-  const placeholderDataUri = 'darling-placeholder.jpg';
+  const placeholderDataUri = 'assets/darling-placeholder.jpg';
 
   // Collect all available images
   const images = [];
@@ -646,6 +646,17 @@ function addListStyles() {
       text-align: center;
       color: var(--secondary-color);
       padding: 40px 16px;
+    }
+
+    /* Teal Map FAB override for list view only */
+    .list-view ~ .map-fab,
+    .list-view + .map-fab {
+      background-color: #2DB995 !important;
+      color: #FFFFFF !important;
+    }
+    .list-view ~ .map-fab:hover,
+    .list-view + .map-fab:hover {
+      filter: brightness(0.95);
     }
   `;
   
