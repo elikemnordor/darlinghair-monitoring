@@ -10,6 +10,7 @@ import {
 
 let currentFilteredOutlets = [];
 let activeValidationFilter = null; // null, 'validated', or 'not-validated'
+let userLocation = null;
 
 export function renderList() {
   const app = document.getElementById('app');
@@ -76,6 +77,7 @@ export function renderList() {
   
   // Add styles
   addListStyles();
+  requestUserLocation();
   
   // Load outlets
   loadOutlets();
@@ -214,6 +216,37 @@ function toggleValidationFilter(filterType) {
   applyFilters();
 }
 
+function requestUserLocation() {
+  try {
+    if (!navigator.geolocation) return;
+  } catch (_) { return; }
+  navigator.geolocation.getCurrentPosition(
+    (position) => {
+      userLocation = { lat: position.coords.latitude, lng: position.coords.longitude };
+      try { applyFilters(); } catch (_) {}
+    },
+    () => {},
+    { enableHighAccuracy: true, timeout: 10000, maximumAge: 60000 }
+  );
+}
+
+function calculateDistance(lat1, lon1, lat2, lon2) {
+  const R = 6371e3;
+  const phi1 = lat1 * Math.PI / 180;
+  const phi2 = lat2 * Math.PI / 180;
+  const dPhi = (lat2 - lat1) * Math.PI / 180;
+  const dLambda = (lon2 - lon1) * Math.PI / 180;
+  const a = Math.sin(dPhi / 2) * Math.sin(dPhi / 2) + Math.cos(phi1) * Math.cos(phi2) * Math.sin(dLambda / 2) * Math.sin(dLambda / 2);
+  const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+  return R * c;
+}
+
+function formatDistance(meters) {
+  if (!(Number.isFinite(meters))) return '';
+  if (meters < 1000) return `${Math.round(meters)} m`;
+  return `${(meters / 1000).toFixed(2)} km`;
+}
+
 function applyFilters() {
   const session = state.getSession();
   const { all: allOutlets } = state.getOutletsForAgent(session.agentId);
@@ -245,6 +278,20 @@ function applyFilters() {
     
     return true;
   });
+  const nv = filtered.filter(o => !o._isValidated);
+  const v = filtered.filter(o => o._isValidated);
+  if (userLocation && typeof userLocation.lat === 'number' && typeof userLocation.lng === 'number') {
+    nv.sort((a, b) => {
+      const aLat = parseFloat(a.latitude);
+      const aLng = parseFloat(a.longitude);
+      const bLat = parseFloat(b.latitude);
+      const bLng = parseFloat(b.longitude);
+      const da = (Number.isFinite(aLat) && Number.isFinite(aLng)) ? calculateDistance(userLocation.lat, userLocation.lng, aLat, aLng) : Infinity;
+      const db = (Number.isFinite(bLat) && Number.isFinite(bLng)) ? calculateDistance(userLocation.lat, userLocation.lng, bLat, bLng) : Infinity;
+      return da - db;
+    });
+  }
+  filtered = [...nv, ...v];
   
   // Update counters (show total counts, not filtered counts)
   const allFiltered = allOutlets.filter(outlet => {
@@ -332,6 +379,15 @@ function createOutletCard(outlet) {
   }
   
   const outletId = outlet.captured_id || outlet.assigned_outlet_id;
+  let distanceText = '';
+  if (!outlet._isValidated && userLocation && typeof userLocation.lat === 'number' && typeof userLocation.lng === 'number') {
+    const lat = parseFloat(outlet.latitude);
+    const lng = parseFloat(outlet.longitude);
+    if (Number.isFinite(lat) && Number.isFinite(lng)) {
+      const d = calculateDistance(userLocation.lat, userLocation.lng, lat, lng);
+      distanceText = formatDistance(d);
+    }
+  }
   
   return `
     <div class="outlet-card" id="card-${outletId}">
@@ -365,6 +421,7 @@ function createOutletCard(outlet) {
           <span>${outlet.contact_name} • ${outlet.contact_phone}</span>
         </div>
         <div class="card-attributes">
+          ${(!outlet._isValidated && distanceText) ? `<span class="badge">${distanceText}</span>` : ''}
           ${outlet.headerboard ? '<span class="badge">Headerboard</span>' : ''}
           ${outlet.painted ? '<span class="badge">Painted</span>' : ''}
           ${outlet.telescopic ? '<span class="badge">Telescopic</span>' : ''}
